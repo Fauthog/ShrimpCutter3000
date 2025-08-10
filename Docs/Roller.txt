@@ -1,0 +1,33 @@
+Driver: VECTOR-S100 PRO because Speed Range/rpm 1000~6900
+
+08b14t sprocket
+
+DGBL-50A-100W-S-24V-36M-285L-S3-L-C1-C
+
+DGBL Type
+
+50mm
+
+100W
+
+S100 Driver
+
+24Volt
+
+51m/min
+
+RL=285mm length (Customized according to customer need)
+
+S304 stainless steel
+
+sprocket (08B14T)
+
+12 hexagon cable outlet type
+
+12 hexagon end shaft
+
+Special requirements: protection (IP65)-HS; brake: electronic brake or (mechanical brake)-Z; spring shaft-TX
+
+
+DGBL-50A-80W-S-24V-36M-285L-S3-L-C1-C
+DGBL-60A-80W-S-24V-43M-285L-S3-L-C1-C
