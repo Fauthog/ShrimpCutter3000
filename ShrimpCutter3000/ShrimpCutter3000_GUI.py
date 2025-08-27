@@ -526,6 +526,8 @@ class Commissioning_TabFrame(customtkinter.CTkFrame):
         self.ls_btn.grid(row=3, column=0, padx=20, pady=(10, 0))
         self.state_text = customtkinter.CTkButton(frame, text="state", state="disabled")
         self.state_text.grid(row=4, column=0, padx=20, pady=(10, 0))
+        self.LaserFeedback_btn = customtkinter.CTkButton(frame, text="LaserFeedback", command=lambda: self.state_callback("LaserFeedback"))
+        self.LaserFeedback_btn.grid(row=4, column=1, padx=20, pady=(10, 0))
 
     def loopFrame(self, frame):
         self.loopStates = []
@@ -555,6 +557,19 @@ class Commissioning_TabFrame(customtkinter.CTkFrame):
         )
         self.cut_and_clean_btn.grid(row=8, column=0, padx=20, pady=(10, 0))
         self.loopStates.append(self.cut_and_clean_btn)
+        
+        self.pause_btn = customtkinter.CTkButton(
+            frame,
+            text="pause",            
+            command=lambda: self.state_callback("pause"),
+        )
+        self.pause_btn.grid(row=9, column=0, padx=0, pady=(10, 0))
+        self.continue_btn = customtkinter.CTkButton(
+            frame,
+            text="continue",    
+            command=lambda: self.state_callback("continue"),
+        )
+        self.continue_btn.grid(row=10, column=0, padx=0, pady=(10, 0))
 
     def flowFrame(self, frame):
         self.ServoSetup = customtkinter.CTkLabel(
@@ -994,6 +1009,9 @@ class Commissioning_TabFrame(customtkinter.CTkFrame):
                 self.ls_btn.configure(fg_color="red")
         if "ProcessState" in self.currentState:
             self.state_text.configure(text=self.currentState["ProcessState"])
+        if "LaserFeedback" in self.currentState:
+            self.LaserFeedback_btn.configure(text="LaserFeedback" + str(self.currentState["LaserFeedback"]))
+            
 
     def state_callback(self, text):
         if "[" in text:

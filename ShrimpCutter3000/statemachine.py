@@ -289,6 +289,7 @@ class statemachine:
         G2Ready = False
         WantToEnd = False
         counter = 0
+        LaserFeedback = False
         while True:
             if PSW != GPIO.input(21):
                 PSW = GPIO.input(21)
@@ -347,7 +348,13 @@ class statemachine:
                         ProcessState = "Release"
                     case "direct":
                         hold = False
+                        # ~ QueueArduinoCommand.put([77,"0"])
                         ProcessState = "direct"
+                        ProcessStateBelt = "init"
+                        ProcessStateG1="init"
+                        ProcessStateG2="init"
+                        ProcessStateRotator="init" 
+                        ProcessStateSuction="init"                       
                         DirectTarget = [state[1], state[2]]
                     case "LDGoTo":
                         hold = False
@@ -363,7 +370,17 @@ class statemachine:
                     case "End":
                         hold = False
                         ProcessState = "End"
-
+                    case "LaserFeedback":
+                            
+                            if LaserFeedback:
+                                    LaserFeedback = False
+                            else:
+                                    LaserFeedback = True
+                            print("LaserFeedback", LaserFeedback)
+            if LaserFeedback:
+                    # ~ QueueCurrentState.put(["LaserFeedback", chan.value])
+                    # ~ time.sleep(0.1)
+                    continue
             if EmergencyState != GPIO.input(16):
                 EmergencyState = GPIO.input(16)
                 QueueCurrentState.put(["EmergencyButton", GPIO.input(16)])
@@ -1197,4 +1214,4 @@ class statemachine:
                     case _:
                         pass
             else:
-                    time.sleep(0.05)
+                    time.sleep(0.1)
