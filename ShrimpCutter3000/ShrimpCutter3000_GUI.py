@@ -144,38 +144,42 @@ class GUI_TabFrame(customtkinter.CTkFrame):
             self.BaseFrame3, text="48", state="disabled"
         )
         self.relay48_btn.grid(row=1, column=1, padx=20, pady=(10, 0))
+        self.relay36_btn = customtkinter.CTkButton(
+            self.BaseFrame3, text="36", state="disabled"
+        )
+        self.relay36_btn.grid(row=2, column=1, padx=20, pady=(10, 0))
         self.psw_btn = customtkinter.CTkButton(
             self.BaseFrame3, text="psw", state="disabled"
         )
-        self.psw_btn.grid(row=2, column=0, padx=20, pady=(10, 0))
+        self.psw_btn.grid(row=3, column=0, padx=20, pady=(10, 0))
         self.laserAnalog_btn = customtkinter.CTkButton(
             self.BaseFrame3, text="0", state="disabled"
         )
-        self.laserAnalog_btn.grid(row=2, column=1, padx=20, pady=(10, 0))
+        self.laserAnalog_btn.grid(row=3, column=1, padx=20, pady=(10, 0))
         self.servo0_btn = customtkinter.CTkButton(
             self.BaseFrame3, text="servo0", state="disabled"
         )
-        self.servo0_btn.grid(row=3, column=0, padx=20, pady=(10, 0))
+        self.servo0_btn.grid(row=4, column=0, padx=20, pady=(10, 0))
         self.servo1_btn = customtkinter.CTkButton(
             self.BaseFrame3, text="servo0", state="disabled"
         )
-        self.servo1_btn.grid(row=3, column=1, padx=20, pady=(10, 0))
+        self.servo1_btn.grid(row=4, column=1, padx=20, pady=(10, 0))
         self.servo2_btn = customtkinter.CTkButton(
             self.BaseFrame3, text="servo0", state="disabled"
         )
-        self.servo2_btn.grid(row=4, column=0, padx=20, pady=(10, 0))
+        self.servo2_btn.grid(row=5, column=0, padx=20, pady=(10, 0))
         self.servo3_btn = customtkinter.CTkButton(
             self.BaseFrame3, text="servo0", state="disabled"
         )
-        self.servo3_btn.grid(row=4, column=1, padx=20, pady=(10, 0))
+        self.servo3_btn.grid(row=5, column=1, padx=20, pady=(10, 0))
         self.servo4_btn = customtkinter.CTkButton(
             self.BaseFrame3, text="servo0", state="disabled"
         )
-        self.servo4_btn.grid(row=5, column=0, padx=20, pady=(10, 0))
+        self.servo4_btn.grid(row=6, column=0, padx=20, pady=(10, 0))
         self.servo5_btn = customtkinter.CTkButton(
             self.BaseFrame3, text="servo0", state="disabled"
         )
-        self.servo5_btn.grid(row=5, column=1, padx=20, pady=(10, 0))
+        self.servo5_btn.grid(row=6, column=1, padx=20, pady=(10, 0))
         self.getCurrentState()
 
     def getCurrentState(self):
@@ -226,6 +230,11 @@ class GUI_TabFrame(customtkinter.CTkFrame):
                 self.relay48_btn.configure(fg_color="green")
             else:
                 self.relay48_btn.configure(fg_color="red")
+        if "36" in self.currentState:
+            if self.currentState["36"]:
+                self.relay36_btn.configure(fg_color="green")
+            else:
+                self.relay36_btn.configure(fg_color="red")
         if "psw" in self.currentState:
             if self.currentState["psw"]:
                 self.psw_btn.configure(fg_color="green")
@@ -516,18 +525,24 @@ class Commissioning_TabFrame(customtkinter.CTkFrame):
         self.relay46_btn.grid(row=1, column=0, padx=20, pady=(10, 0))
         self.relay48_btn = customtkinter.CTkButton(frame, text="48", state="disabled")
         self.relay48_btn.grid(row=1, column=1, padx=20, pady=(10, 0))
+        self.relay36_btn = customtkinter.CTkButton(frame, text="36", state="disabled")
+        self.relay36_btn.grid(row=2, column=0, padx=20, pady=(10, 0))
         self.psw_btn = customtkinter.CTkButton(frame, text="psw", state="disabled")
-        self.psw_btn.grid(row=2, column=0, padx=20, pady=(10, 0))
+        self.psw_btn.grid(row=3, column=0, padx=20, pady=(10, 0))
         self.laserAnalog_btn = customtkinter.CTkButton(
             frame, text="0", state="disabled"
         )
-        self.laserAnalog_btn.grid(row=2, column=1, padx=20, pady=(10, 0))
+        self.laserAnalog_btn.grid(row=3, column=1, padx=20, pady=(10, 0))
         self.ls_btn = customtkinter.CTkButton(frame, text="LS", state="disabled")
-        self.ls_btn.grid(row=3, column=0, padx=20, pady=(10, 0))
+        self.ls_btn.grid(row=4, column=0, padx=20, pady=(10, 0))
         self.state_text = customtkinter.CTkButton(frame, text="state", state="disabled")
-        self.state_text.grid(row=4, column=0, padx=20, pady=(10, 0))
-        self.LaserFeedback_btn = customtkinter.CTkButton(frame, text="LaserFeedback", command=lambda: self.state_callback("LaserFeedback"))
-        self.LaserFeedback_btn.grid(row=4, column=1, padx=20, pady=(10, 0))
+        self.state_text.grid(row=5, column=0, padx=20, pady=(10, 0))
+        self.LaserFeedback_btn = customtkinter.CTkButton(
+            frame,
+            text="LaserFeedback",
+            command=lambda: self.state_callback("LaserFeedback"),
+        )
+        self.LaserFeedback_btn.grid(row=5, column=1, padx=20, pady=(10, 0))
 
     def loopFrame(self, frame):
         self.loopStates = []
@@ -551,22 +566,22 @@ class Commissioning_TabFrame(customtkinter.CTkFrame):
         )
         self.start_position_btn.grid(row=3, column=0, padx=20, pady=(10, 0))
         self.loopStates.append(self.start_position_btn)
-        
+
         self.cut_and_clean_btn = customtkinter.CTkButton(
             frame, text="End", anchor="s", command=lambda: self.state_callback("End")
         )
         self.cut_and_clean_btn.grid(row=8, column=0, padx=20, pady=(10, 0))
         self.loopStates.append(self.cut_and_clean_btn)
-        
+
         self.pause_btn = customtkinter.CTkButton(
             frame,
-            text="pause",            
+            text="pause",
             command=lambda: self.state_callback("pause"),
         )
         self.pause_btn.grid(row=9, column=0, padx=0, pady=(10, 0))
         self.continue_btn = customtkinter.CTkButton(
             frame,
-            text="continue",    
+            text="continue",
             command=lambda: self.state_callback("continue"),
         )
         self.continue_btn.grid(row=10, column=0, padx=0, pady=(10, 0))
@@ -591,20 +606,14 @@ class Commissioning_TabFrame(customtkinter.CTkFrame):
 
         self.ServoSetupOpen = customtkinter.CTkLabel(frame, text="270")
         self.ServoSetupOpen.grid(row=2, column=2, padx=20, pady=(10, 0))
-        
-        self.LDLabel = customtkinter.CTkLabel(
-            frame, text="LD go to:"
-        )
+
+        self.LDLabel = customtkinter.CTkLabel(frame, text="LD go to:")
         self.LDLabel.grid(row=3, column=1, padx=20, pady=(10, 0))
-        
-        self.LDGoToEntry=customtkinter.CTkEntry(
-            frame, placeholder_text="Position"
-        )
+
+        self.LDGoToEntry = customtkinter.CTkEntry(frame, placeholder_text="Position")
         self.LDGoToEntry.grid(row=4, column=1, sticky="we")
-        self.LDGoToEntry.bind(
-            "<Return>", self.LDGoToEntry_return_key_event
-        )
-        
+        self.LDGoToEntry.bind("<Return>", self.LDGoToEntry_return_key_event)
+
         self.LDMOT = customtkinter.CTkLabel(frame, text="-21500")
         self.LDMOT.grid(row=4, column=0, padx=20, pady=(10, 0))
 
@@ -919,19 +928,38 @@ class Commissioning_TabFrame(customtkinter.CTkFrame):
         )
         self.relay48_Off_btn.grid(row=24, column=1, padx=20, pady=(10, 0))
 
+        self.relay36_label = customtkinter.CTkLabel(
+            frame, text="relay 36", font=customtkinter.CTkFont(size=20, weight="bold")
+        )
+        self.relay36_label.grid(row=25, column=0, padx=20, pady=20, sticky="nsew")
+        self.relay36_On_btn = customtkinter.CTkButton(
+            frame,
+            text="relay On",
+            anchor="s",
+            command=lambda: self.state_callback("direct, 36, 1"),
+        )
+        self.relay36_On_btn.grid(row=26, column=0, padx=20, pady=(10, 0))
+        self.relay36_Off_btn = customtkinter.CTkButton(
+            frame,
+            text="relay Off",
+            anchor="s",
+            command=lambda: self.state_callback("direct, 36, 0"),
+        )
+        self.relay36_Off_btn.grid(row=26, column=1, padx=20, pady=(10, 0))
+
         self.LD_label = customtkinter.CTkLabel(
             frame,
             text="Linear Drive",
             font=customtkinter.CTkFont(size=20, weight="bold"),
         )
-        self.LD_label.grid(row=25, column=0, padx=20, pady=20, sticky="nsew")
+        self.LD_label.grid(row=27, column=0, padx=20, pady=20, sticky="nsew")
         self.LD_home_btn = customtkinter.CTkButton(
             frame,
             text="Homing",
             anchor="s",
             command=lambda: self.state_callback("homing"),
         )
-        self.LD_home_btn.grid(row=26, column=0, padx=20, pady=(10, 0))
+        self.LD_home_btn.grid(row=28, column=0, padx=20, pady=(10, 0))
 
     def updateGUItoCurrentState(self):
         if "arduino" in self.currentState:
@@ -988,6 +1016,11 @@ class Commissioning_TabFrame(customtkinter.CTkFrame):
                 self.relay48_btn.configure(fg_color="green")
             else:
                 self.relay48_btn.configure(fg_color="red")
+        if "36" in self.currentState:
+            if self.currentState["36"]:
+                self.relay36_btn.configure(fg_color="green")
+            else:
+                self.relay36_btn.configure(fg_color="red")
         if "psw" in self.currentState:
             if self.currentState["psw"]:
                 self.psw_btn.configure(fg_color="red")
@@ -1010,8 +1043,9 @@ class Commissioning_TabFrame(customtkinter.CTkFrame):
         if "ProcessState" in self.currentState:
             self.state_text.configure(text=self.currentState["ProcessState"])
         if "LaserFeedback" in self.currentState:
-            self.LaserFeedback_btn.configure(text="LaserFeedback" + str(self.currentState["LaserFeedback"]))
-            
+            self.LaserFeedback_btn.configure(
+                text="LaserFeedback" + str(self.currentState["LaserFeedback"])
+            )
 
     def state_callback(self, text):
         if "[" in text:
@@ -1060,17 +1094,17 @@ class Commissioning_TabFrame(customtkinter.CTkFrame):
             self.state_callback("direct, 5, " + str(angle))
         except:
             print("NaN")
-    
+
     def LDGoToEntry_return_key_event(self, event):
-        try:            
-            pos=int(self.LDGoToEntry.get().strip())
-            print("LDGOTO:",pos) 
+        try:
+            pos = int(self.LDGoToEntry.get().strip())
+            print("LDGOTO:", pos)
             self.state_callback("LDGoTo, " + str(pos))
         except:
             print("NaN")
+
 
 if __name__ == "__main__":
     global app
     app = App()
     app.mainloop()
-

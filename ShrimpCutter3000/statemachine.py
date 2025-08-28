@@ -184,6 +184,13 @@ class statemachine:
                     else:
                         self.arduino.activateRelays(command[0], True)
                         QueueCurrentState.put([str(command[0]), True])
+                elif command[0]==36:
+                    if command[1] == "0":
+                        self.arduino.activateRelays(command[0], False)
+                        QueueCurrentState.put([str(command[0]), False])
+                    else:
+                        self.arduino.activateRelays(command[0], True)
+                        QueueCurrentState.put([str(command[0]), True])
                 elif command[0] == 77:
                     self.arduino.writeToArduino("<77>")
             time.sleep(0.01)
@@ -392,6 +399,7 @@ class statemachine:
                     QueueArduinoCommand.put([44, "0"])
                     QueueArduinoCommand.put([46, "0"])
                     QueueArduinoCommand.put([48, "0"])
+                    QueueArduinoCommand.put([36, "0"])
                     counter += 1
                 if not QueueRequestedState.empty():
                     while not QueueRequestedState.empty():
