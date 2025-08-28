@@ -59,7 +59,7 @@ unsigned long lastActivationTime = 0;
 
 void setup()
 {
-    
+
     // set servo pins to output and LOW
     // pinMode(servo0Pin, OUTPUT); // sets the digital pin 30 as output
     // digitalWrite(servo0Pin, LOW);
@@ -74,14 +74,16 @@ void setup()
     // pinMode(servo5Pin, OUTPUT); // sets the digital pin 30 as output
     // digitalWrite(servo5Pin, LOW);
     // set solenoid pins to output and LOW
-    pinMode(42, OUTPUT); // sets the digital pin 30 as output
+    pinMode(42, OUTPUT);
     digitalWrite(42, LOW);
-    pinMode(44, OUTPUT); // sets the digital pin 32 as output
+    pinMode(44, OUTPUT);
     digitalWrite(44, LOW);
-    pinMode(46, OUTPUT); // sets the digital pin 32 as output
-    digitalWrite(44, LOW);
-    pinMode(48, OUTPUT); // sets the digital pin 32 as output
-    digitalWrite(44, LOW);
+    pinMode(46, OUTPUT);
+    digitalWrite(46, LOW);
+    pinMode(48, OUTPUT);
+    digitalWrite(48, LOW);
+    pinMode(36, OUTPUT);
+    digitalWrite(36, LOW);
     delay(500);
     Serial.begin(9600);
 }
@@ -262,7 +264,7 @@ void parseData()
     case 42:
         if (value == 1)
         {
-           
+
             digitalWrite(42, HIGH);
         }
         else
@@ -274,7 +276,7 @@ void parseData()
     case 44:
         if (value == 1)
         {
-   
+
             digitalWrite(44, HIGH);
         }
         else
@@ -309,6 +311,18 @@ void parseData()
         }
 
         break;
+
+    case 36:
+        if (value == 1)
+        {
+            digitalWrite(36, HIGH);
+        }
+        else
+        {
+            digitalWrite(36, LOW);
+        }
+
+        break;
     // detach servos at app exit and set solenoids to LOW
     case 77:
         servo0.detach();
@@ -317,7 +331,10 @@ void parseData()
         servo3.detach();
         servo4.detach();
         servo5.detach();
-        digitalWrite(30, LOW);
-        digitalWrite(32, LOW);
+        digitalWrite(42, LOW);
+        digitalWrite(44, LOW);
+        digitalWrite(46, LOW);
+        digitalWrite(48, LOW);
+        digitalWrite(36, LOW);
     }
 }
