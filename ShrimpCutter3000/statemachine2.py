@@ -389,7 +389,7 @@ class statemachine:
                 PS1 = "Emergency"
                 hold = True
                 homing=False
-                nextstep=""
+                nextstep="init"
                 if counter <= 2:
                     QueueArduinoCommand.put([42, "0"])
                     QueueArduinoCommand.put([44, "0"])
@@ -447,9 +447,14 @@ class statemachine:
                         if current_time - timer1 >= self.T4:
                             PS3 = "startup"
                             PS1 = "ArmReadyForHoming3"
-                    case "ArmReadyForHoming3":
+                    case "ArmReadyForHoming3":                       
                         if PS3 == "Ready":
-                            PS1 = "Homing"
+                            if homing:
+                                PS1="GoToWaitPosition"
+                            else:
+                                PS1 = "Homing"
+
+                            
                     case "OnlyHoming":
                         QueueArduinoCommand.put([0, self.servo0Pos2])
                         QueueArduinoCommand.put([1, self.servo1Pos1])
@@ -531,8 +536,7 @@ class statemachine:
                                     hold = True
                                     PS1 = "init"
                                 else:
-                                    waitingFor="Laser Clear"
-                            
+                                    waitingFor="Laser Clear"            
                     case "direct":                    
                         QueueArduinoCommand.put(DirectTarget)
                         PS1 = "init"
@@ -594,18 +598,7 @@ class statemachine:
                             QueueArduinoCommand.put([44, "0"])
                             PS1 = "init"
                             PS2 = "init"
-                    case "StartAfterEnd":
-                        QueueArduinoCommand.put([0, self.servo0Pos2])
-                        QueueArduinoCommand.put([1, self.servo1Pos1])
-                        timer1 = time.perf_counter()
-                        LDPosition = None
-                        QueueLDCommand.put(["Pos"])
-                        PS1 = "StartAfterEnd1"
-                    case "StartAfterEnd1":
-                        if current_time - timer1 >= self.T6:
-                            PS3 = "startup"
-                            PS1 = "StartAfterEnd2"
-                    case "StartAfterEnd2":
+                    
                         if PS3 == "Ready":
                             if LDPosition != None:
                                 delta = self.WaitPosition - LDPosition
