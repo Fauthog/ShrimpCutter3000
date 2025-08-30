@@ -177,20 +177,13 @@ class statemachine:
                 if 0 <= command[0] <= 5:
                     self.arduino.moveServoToAngle(command[0], float(command[1]))
                     QueueCurrentState.put([str(command[0]), str(command[1])])
-                elif 42 <= command[0] <= 48:
+                elif command[0] in [36, 42, 44, 46, 48]:
                     if command[1] == "0":
                         self.arduino.activateRelays(command[0], False)
                         QueueCurrentState.put([str(command[0]), False])
                     else:
                         self.arduino.activateRelays(command[0], True)
-                        QueueCurrentState.put([str(command[0]), True])
-                elif command[0] == 36:
-                    if command[1] == "0":
-                        self.arduino.activateRelays(command[0], False)
-                        QueueCurrentState.put([str(command[0]), False])
-                    else:
-                        self.arduino.activateRelays(command[0], True)
-                        QueueCurrentState.put([str(command[0]), True])
+                        QueueCurrentState.put([str(command[0]), True])               
                 elif command[0] == 77:
                     self.arduino.writeToArduino("<77>")
             time.sleep(0.01)
@@ -274,6 +267,7 @@ class statemachine:
         ProcessStateString_minus = None
 
         homing = False
+        nextstep="init"
         hold = False
         G1 = None
         G1Ready = False
@@ -302,6 +296,10 @@ class statemachine:
         PSW = None
         LS = None
 
+        waitingFor=""
+
+        
+
         beltCounter = 0
 
         while True:
@@ -327,13 +325,7 @@ class statemachine:
                     case "start":
                         hold = False
                         PS1 = "ArmReadyForHoming"
-                        # ~ if homing:
-                        # ~ if WantToEnd:
-                        # ~ ProcessState = "StartAfterEnd"
-                        # ~ else:
-                        # ~ ProcessState = "ReturnToPickupFromAnywhere"
-                        # ~ else:
-                        # ~ ProcessState = "ArmReadyForHoming"
+                        nextstep="run"
                     case "hold":
                         hold = True
                     case "pause":
@@ -352,10 +344,6 @@ class statemachine:
                     case "prepareStart":
                         hold = False
                         PS1 = "ArmReadyForHoming"
-                        # ~ if homing:
-                        # ~ ProcessState = "ReturnToPickupFromAnywhere"
-                        # ~ else:
-                        # ~ ProcessState = "ArmReadyForHoming"
                     case "loadFeederBelt":
                         hold = False
                         PS1 = "LoadFeederBelt"
@@ -364,7 +352,6 @@ class statemachine:
                         PS1 = "Release"
                     case "direct":
                         hold = False
-                        # ~ QueueArduinoCommand.put([77,"0"])
                         PS1 = "direct"
                         PS2 = "init"
                         PS3 = "init"
@@ -379,7 +366,7 @@ class statemachine:
                         PS1 = "MoveLDToCustomPosition"
                     case "homing":
                         hold = False
-                        PS1 = "Homing"
+                        PS1 = "OnlyHoming"
                     case "StopAndGo":
                         hold = False
                         PS1 = "ReturnToPickupFromAnywhere"
@@ -394,15 +381,15 @@ class statemachine:
                             LaserFeedback = True
                         print("LaserFeedback", LaserFeedback)
             if LaserFeedback:
-                # ~ QueueCurrentState.put(["LaserFeedback", chan.value])
-                # ~ time.sleep(0.1)
-                continue
+                QueueCurrentState.put(["LaserFeedback", chan.value])
             if EmergencyState != GPIO.input(16):
                 EmergencyState = GPIO.input(16)
                 QueueCurrentState.put(["EmergencyButton", GPIO.input(16)])
             if EmergencyState:
                 PS1 = "Emergency"
                 hold = True
+                homing=False
+                nextstep=""
                 if counter <= 2:
                     QueueArduinoCommand.put([42, "0"])
                     QueueArduinoCommand.put([44, "0"])
@@ -418,7 +405,8 @@ class statemachine:
             else:
                 counter = 0
             ProcessStateString = (
-                "M: "
+                waitingFor+
+                " M: "
                 + PS1
                 + " B:"
                 + PS2
@@ -436,11 +424,56 @@ class statemachine:
                 QueueCurrentState.put(["ProcessState", ProcessStateString])
 
             if not hold:
+                waitingFor=""
                 match PS1:
                     case "init":
                         pass
                     case "Emergency":
                         pass
+                    case "ArmReadyForHoming":
+                        QueueArduinoCommand.put([0, self.servo0Pos2])
+                        QueueArduinoCommand.put([1, self.servo1Pos1])
+                        timer1 = time.perf_counter()
+                        PS1 = "ArmReadyForHoming2a"
+                    case "ArmReadyForHoming2a":
+                        if current_time - timer1 >= self.T4:
+                            if GPIO.input(20):
+                                timer1 = time.perf_counter()
+                                PS1 = "ArmReadyForHoming2"
+                            else:
+                                PS1 = "ArmReadyForHoming"
+                                waitingFor="Laser Clear"
+                    case "ArmReadyForHoming2":
+                        if current_time - timer1 >= self.T4:
+                            PS3 = "startup"
+                            PS1 = "ArmReadyForHoming3"
+                    case "ArmReadyForHoming3":
+                        if PS3 == "Ready":
+                            PS1 = "Homing"
+                    case "OnlyHoming":
+                        QueueArduinoCommand.put([0, self.servo0Pos2])
+                        QueueArduinoCommand.put([1, self.servo1Pos1])
+                        timer1 = time.perf_counter()
+                        PS1 = "OnlyHoming2"
+                    case "OnlyHoming2":
+                        if current_time - timer1 >= self.T4:
+                            if GPIO.input(20):
+                                timer1 = time.perf_counter()
+                                PS1 = "Homing"  
+                            else:
+                                waitingFor="Laser Clear"                   
+                    case "Homing":
+                        QueueLDCommand.put(["homing"])
+                        timer1 = time.perf_counter()
+                        PS1 = "Homing2"
+                    case "Homing2":
+                        if current_time - timer1 >= self.T5:
+                            homing = True
+                            timer1 = time.perf_counter()
+                            if nextstep=="run":
+                                PS1 = "GoToWaitPosition"
+                            else:
+                                PS1 = "init"
                     case "End":
                         QueueArduinoCommand.put([42, "0"])
                         time.sleep(0.05)
@@ -472,7 +505,6 @@ class statemachine:
                             else:
                                 hold = True
                                 PS1 = "init"
-
                     case "Release":
                         QueueArduinoCommand.put([42, "0"])
                         time.sleep(0.05)
@@ -494,10 +526,14 @@ class statemachine:
                         if LDPosition != None:
                             delta = 0 - LDPosition
                             if abs(delta) > 100:
-                                QueueLDCommand.put(["goto", delta, self.RestSpeed])
-                            hold = True
-                            PS1 = "init"
-                    case "direct":
+                                if GPIO.input(20):
+                                    QueueLDCommand.put(["goto", delta, self.RestSpeed])
+                                    hold = True
+                                    PS1 = "init"
+                                else:
+                                    waitingFor="Laser Clear"
+                            
+                    case "direct":                    
                         QueueArduinoCommand.put(DirectTarget)
                         PS1 = "init"
                         hold = True
@@ -526,9 +562,13 @@ class statemachine:
                     case "MoveLDToCustomPosition3":
                         if LDPosition != None:
                             delta = LDPosTarget - LDPosition
-                            QueueLDCommand.put(["goto", delta, self.CustomSpeed])
-                            hold = True
-                            PS1 = "init"
+                            if GPIO.input(20):
+                                QueueLDCommand.put(["goto", delta, self.CustomSpeed])
+                                hold = True
+                                PS1 = "init"
+                            else:
+                                waitingFor="Laser Clear"
+                            
                         else:
                             if current_time - timer1 >= self.T8:
                                 QueueLDCommand.put(["Pos"])
@@ -554,34 +594,6 @@ class statemachine:
                             QueueArduinoCommand.put([44, "0"])
                             PS1 = "init"
                             PS2 = "init"
-                    case "ArmReadyForHoming":
-                        QueueArduinoCommand.put([0, self.servo0Pos2])
-                        QueueArduinoCommand.put([1, self.servo1Pos1])
-                        timer1 = time.perf_counter()
-                        PS1 = "ArmReadyForHoming2a"
-                    case "ArmReadyForHoming2a":
-                        if current_time - timer1 >= self.T4:
-                            if GPIO.input(20):
-                                timer1 = time.perf_counter()
-                                PS1 = "ArmReadyForHoming2"
-                            else:
-                                PS1 = "ArmReadyForHoming"
-                    case "ArmReadyForHoming2":
-                        if current_time - timer1 >= self.T4:
-                            PS3 = "startup"
-                            PS1 = "ArmReadyForHoming3"
-                    case "ArmReadyForHoming3":
-                        if PS3 == "Ready":
-                            PS1 = "Homing"
-                    case "Homing":
-                        QueueLDCommand.put(["homing"])
-                        timer1 = time.perf_counter()
-                        PS1 = "Homing2"
-                    case "Homing2":
-                        if current_time - timer1 >= self.T5:
-                            homing = True
-                            timer1 = time.perf_counter()
-                            PS1 = "GoToWaitPosition"
                     case "StartAfterEnd":
                         QueueArduinoCommand.put([0, self.servo0Pos2])
                         QueueArduinoCommand.put([1, self.servo1Pos1])
@@ -597,8 +609,11 @@ class statemachine:
                         if PS3 == "Ready":
                             if LDPosition != None:
                                 delta = self.WaitPosition - LDPosition
-                                QueueLDCommand.put([["goto", delta, self.MoveSpeed]])
-                                PS1 = "StartKnife"
+                                if GPIO.input(20):
+                                    QueueLDCommand.put([["goto", delta, self.MoveSpeed]])
+                                    PS1 = "StartKnife"
+                                else:
+                                    waitingFor="Laser Clear"
                     case "GoToWaitPosition":
                         if homing == True:
                             QueueLDCommand.put(
@@ -613,7 +628,6 @@ class statemachine:
                     case "StartingKnife1":
                         if current_time - timer1 >= self.T7:
                             PS1 = "CheckLDPosition"
-
                     case "CheckLDPosition":
                         if WantToEnd:
                             PS1 = "End"
@@ -645,13 +659,11 @@ class statemachine:
                                         if current_time - timerLD >= self.T8:
                                             QueueLDCommand.put(["Pos"])
                                             timerLD = time.perf_counter()
-
                     case "WaitingForBelt":
                         if PS2 == "init":
                             PS2 = "StopAndGo"
                         elif PS2 == "Stopped":
                             PS1 = "CheckWhereWeAre"
-
                     case "CheckWhereWeAre":
                         QueueCurrentState.put(["LaserAnalog", str(chan.value)])
                         if chan.value > 19500:
@@ -717,10 +729,13 @@ class statemachine:
                             if target != None:
                                 delta = target - LDPosition
                             if abs(delta) > 5:
-                                QueueLDCommand.put(["goto", delta, self.MoveSpeed])
-                                LDPosition = None
-                                timer1 = time.perf_counter()
-                                PS1 = "checkPickupPosition0"
+                                if GPIO.input(20):
+                                    QueueLDCommand.put(["goto", delta, self.MoveSpeed])
+                                    LDPosition = None
+                                    timer1 = time.perf_counter()
+                                    PS1 = "checkPickupPosition0"
+                                else:
+                                    waitingFor="Laser Clear"
                             else:
                                 PS1 = "Pickup"
                     case "checkPickupPosition0":
@@ -766,6 +781,8 @@ class statemachine:
                         # ~ TODO remove comment after laser is adjusted
                         if GPIO.input(20):
                             PS1 = "GoToKnife"
+                        else:
+                            waitingFor="Laser Clear"
                     case "GoToKnife":
                         delta = self.ArrivalPosition - LDPosition
                         QueueLDCommand.put(["goto", delta, self.MoveSpeed])
@@ -793,6 +810,8 @@ class statemachine:
                         if current_time - timer1 >= self.T8:
                             if GPIO.input(20):
                                 PS1 = "cut"
+                            else:
+                                waitingFor="Laser Clear"
                     case "cut":
                         delta = self.CutPosition - self.ArrivalPosition
                         QueueLDCommand.put(["goto", delta, self.CutInSpeed])
@@ -886,25 +905,37 @@ class statemachine:
                             PS1 = "DropOff3"
                     case "DropOff3":
                         if current_time - timer1 >= self.T15:
-                            LDPosition = None
-                            timerLD = time.perf_counter()
-                            if G1Ready:
-                                if PS4 == "Loaded":
-                                    PS4 = "Loaded1"
-                            if G2Ready:
-                                if PS5 == "Loaded":
-                                    PS5 = "Loaded1"
-                            PS1 = "ReturnToPickup"
+                            if GPIO.input(20):
+                                PS1 = "DropOff4"
+                            else:
+                                waitingFor="Laser Clear"
+                    case "DropOff4":
+                        LDPosition = None
+                        timerLD = time.perf_counter()
+                        if G1Ready:
+                            if PS4 == "Loaded":
+                                PS4 = "Loaded1"
+                        if G2Ready:
+                            if PS5 == "Loaded":
+                                PS5 = "Loaded1"
+                        PS1 = "ReturnToPickup"
                     case "ReturnToPickup":
                         if LDPosition != None:
                             if target != None:
-                                delta = target - LDPosition
-                                QueueLDCommand.put(["goto", delta, self.MoveSpeed])
-                                PS1 = "CheckLDPosition"
+                                if GPIO.input(20):
+                                    delta = target - LDPosition
+                                    QueueLDCommand.put(["goto", delta, self.MoveSpeed])
+                                    PS1 = "CheckLDPosition"
+                                else:
+                                    waitingFor="Laser Clear"
+                               
                             else:
-                                delta = self.WaitPosition - LDPosition
-                                QueueLDCommand.put(["goto", delta, self.MoveSpeed])
-                                PS1 = "CheckLDPosition"
+                                if GPIO.input(20):
+                                    delta = self.WaitPosition - LDPosition
+                                    QueueLDCommand.put(["goto", delta, self.MoveSpeed])
+                                    PS1 = "CheckLDPosition"
+                                else:
+                                    waitingFor="Laser Clear"
                         else:
                             if current_time - timerLD >= self.T8:
                                 QueueLDCommand.put(["Pos"])
@@ -927,6 +958,81 @@ class statemachine:
                         PS1 = "ReturnToPickup"
                     case _:
                         pass
+                # --------Belt-----------------
+                match PS2:
+                    case "init":
+                        pass
+                    case "StopAndGo":
+                        target = None
+                        QueueArduinoCommand.put([44, "1"])
+                        timer2 = time.perf_counter()
+                        PS2 = "WaitingForPSW"
+                    case "WaitingForPSW":
+                        if current_time - timer2 >= self.T28:
+                            if not GPIO.input(21):
+                                timer2 = time.perf_counter()
+                                PS2 = "WaitingForMeasurement"
+                    case "WaitingForMeasurement":
+                        if chan.value < 22000:
+                            QueueArduinoCommand.put([44, "0"])
+                            timer2 = time.perf_counter()
+                            PS2 = "WaitingForMeasurement2"
+                    case "WaitingForMeasurement2":
+                        if current_time - timer2 >= self.T29:
+                            PS2 = "CheckWhereWeAre"
+                    case "MoveABit":
+                        if current_time - timer2 >= self.T30:
+                            LDPosition = None
+                            PS2 = "WaitingForMeasurement"
+                    case "CheckWhereWeAre":
+                        QueueCurrentState.put(["LaserAnalog", str(chan.value)])
+                        if chan.value > 19500:
+                            QueueArduinoCommand.put([44, "1"])
+                            PS2 = "MoveABit"
+                        elif 18900 < chan.value <= 19500:
+                            target = 28000
+                            LDPosition = None
+                            PS2 = "Stopped"
+                        elif 17600 < chan.value <= 18900:
+                            target = 27500
+                            LDPosition = None
+                            PS2 = "Stopped"
+                        elif 16500 < chan.value <= 17600:
+                            target = 27000
+                            LDPosition = None
+                            PS2 = "Stopped"
+                        elif 15500 < chan.value <= 16500:
+                            target = 26500
+                            LDPosition = None
+                            PS2 = "Stopped"
+                        elif 15000 < chan.value <= 15500:
+                            target = 26000
+                            LDPosition = None
+                            PS2 = "Stopped"
+                        elif 14000 < chan.value <= 15000:
+                            target = 25500
+                            LDPosition = None
+                            PS2 = "Stopped"
+                        elif 13000 < chan.value <= 14000:
+                            target = 25000
+                            LDPosition = None
+                            PS2 = "Stopped"
+                        elif 12000 < chan.value <= 13000:
+                            target = 24500
+                            LDPosition = None
+                            PS2 = "Stopped"
+                        elif 11500 < chan.value <= 12000:
+                            target = 24000
+                            LDPosition = None
+                            PS2 = "Stopped"
+                        elif chan.value < 11500:
+                            LDPosition = None
+                            PS2 = "StopAndGo"
+                    case "Stopped":
+                        pass
+                    case _:
+                        pass
+                #-------------Rotator---------------------------- 
                 match PS3:
                     case "init":
                         pass
@@ -1012,103 +1118,7 @@ class statemachine:
                                 PS3 = "Ready"
                     case _:
                         pass
-                match PS6:
-                    case "init":
-                        pass
-                    case "startup":
-                        QueueArduinoCommand.put([3, self.servo3Pos1])
-                        PS6 = "init"
-                    case "GoToSuction":
-                        QueueArduinoCommand.put([3, self.servo3Pos3])
-                        timer6 = time.perf_counter()
-                        PS6 = "WaitingForArrival"
-                    case "WaitingForArrival":
-                        if current_time - timer6 >= self.T25:
-                            timer6 = time.perf_counter()
-                            PS6 = "Sucking"
-                    case "Sucking":
-                        if current_time - timer6 >= self.T26:
-                            QueueArduinoCommand.put([3, self.servo3Pos1])
-                            timer6 = time.perf_counter()
-                            PS6 = "Retreat"
-                    case "Retreat":
-                        if current_time - timer6 >= self.T27:
-                            PS6 = "init"
-                    case _:
-                        pass
-                match PS2:
-                    case "init":
-                        pass
-                    case "StopAndGo":
-                        target = None
-                        QueueArduinoCommand.put([44, "1"])
-                        timer2 = time.perf_counter()
-                        PS2 = "WaitingForPSW"
-                    case "WaitingForPSW":
-                        if current_time - timer2 >= self.T28:
-                            if not GPIO.input(21):
-                                timer2 = time.perf_counter()
-                                PS2 = "WaitingForMeasurement"
-                    case "WaitingForMeasurement":
-                        if chan.value < 22000:
-                            QueueArduinoCommand.put([44, "0"])
-                            timer2 = time.perf_counter()
-                            PS2 = "WaitingForMeasurement2"
-                    case "WaitingForMeasurement2":
-                        if current_time - timer2 >= self.T29:
-                            PS2 = "CheckWhereWeAre"
-                    case "MoveABit":
-                        if current_time - timer2 >= self.T30:
-                            LDPosition = None
-                            PS2 = "WaitingForMeasurement"
-                    case "CheckWhereWeAre":
-                        QueueCurrentState.put(["LaserAnalog", str(chan.value)])
-                        if chan.value > 19500:
-                            QueueArduinoCommand.put([44, "1"])
-                            PS2 = "MoveABit"
-                        elif 18900 < chan.value <= 19500:
-                            target = 28000
-                            LDPosition = None
-                            PS2 = "Stopped"
-                        elif 17600 < chan.value <= 18900:
-                            target = 27500
-                            LDPosition = None
-                            PS2 = "Stopped"
-                        elif 16500 < chan.value <= 17600:
-                            target = 27000
-                            LDPosition = None
-                            PS2 = "Stopped"
-                        elif 15500 < chan.value <= 16500:
-                            target = 26500
-                            LDPosition = None
-                            PS2 = "Stopped"
-                        elif 15000 < chan.value <= 15500:
-                            target = 26000
-                            LDPosition = None
-                            PS2 = "Stopped"
-                        elif 14000 < chan.value <= 15000:
-                            target = 25500
-                            LDPosition = None
-                            PS2 = "Stopped"
-                        elif 13000 < chan.value <= 14000:
-                            target = 25000
-                            LDPosition = None
-                            PS2 = "Stopped"
-                        elif 12000 < chan.value <= 13000:
-                            target = 24500
-                            LDPosition = None
-                            PS2 = "Stopped"
-                        elif 11500 < chan.value <= 12000:
-                            target = 24000
-                            LDPosition = None
-                            PS2 = "Stopped"
-                        elif chan.value < 11500:
-                            LDPosition = None
-                            PS2 = "StopAndGo"
-                    case "Stopped":
-                        pass
-                    case _:
-                        pass
+                # --------G1----------
                 match PS4:
                     case "init":
                         pass
@@ -1158,6 +1168,7 @@ class statemachine:
                             PS4 = "getReady"
                     case _:
                         pass
+                # -------G2-----------                
                 match PS5:
                     case "init":
                         pass
@@ -1205,6 +1216,31 @@ class statemachine:
                     case "Empty":
                         if current_time - timer4 >= self.T35:
                             PS5 = "getReady"
+                    case _:
+                        pass                
+                # ------------Suction----------------------------
+                match PS6:
+                    case "init":
+                        pass
+                    case "startup":
+                        QueueArduinoCommand.put([3, self.servo3Pos1])
+                        PS6 = "init"
+                    case "GoToSuction":
+                        QueueArduinoCommand.put([3, self.servo3Pos3])
+                        timer6 = time.perf_counter()
+                        PS6 = "WaitingForArrival"
+                    case "WaitingForArrival":
+                        if current_time - timer6 >= self.T25:
+                            timer6 = time.perf_counter()
+                            PS6 = "Sucking"
+                    case "Sucking":
+                        if current_time - timer6 >= self.T26:
+                            QueueArduinoCommand.put([3, self.servo3Pos1])
+                            timer6 = time.perf_counter()
+                            PS6 = "Retreat"
+                    case "Retreat":
+                        if current_time - timer6 >= self.T27:
+                            PS6 = "init"
                     case _:
                         pass
             else:
